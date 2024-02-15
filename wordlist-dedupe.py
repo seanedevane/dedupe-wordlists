@@ -4,6 +4,7 @@
 # Takes in one or more wordlists and returns a new copy of the list with duplicates removed
 # Also supports combining multiple wordlists into one merged wordlist, also deduped.
 from pathlib import Path
+import re
 
 def dedupe_individual_wordlists(input_path: Path, output_path: Path) -> None:
     '''Receives a wordlist files, parses each individually, and outputs deduplicated versions to a copy in the output_path directory'''
@@ -43,14 +44,27 @@ def process_wordlists(file_or_dir_path: Path) -> set:
     if file_or_dir_path.is_dir():
         files = input_path.glob('*.txt')
         for wordlist in files:
-            with open(wordlist, 'r') as file:
+            with open(wordlist, 'rb') as file:
                 for line in file:
-                    deduped_list.add(line.rstrip())
+                    # avoiding encoding issues with binary read, return to string
+                    line_str = str(line)
+                    line_str = re.sub(r"^b'", '', line_str)
+                    line_str = re.sub(r"\\n'", '', line_str)
+                    # clear any preceding whitespace and holdover line numbers
+                    line_str = line_str.strip()
+                    line_str = re.sub(r'^[0-9] ', '', line_str)
+                    deduped_list.add(line_str)
     # Single wordlist mode
     elif file_or_dir_path.is_file():
-        with open(file_or_dir_path, 'r') as file:
+        with open(file_or_dir_path, 'rb') as file:
             for line in file:
-                deduped_list.add(line.rstrip())
+                line_str = str(line)
+                line_str = re.sub(r"^b'", '', line_str)
+                line_str = re.sub(r"\\n'", '', line_str)
+                # clear any preceding whitespace and holdover line numbers
+                line_str = line_str.strip()
+                line_str = re.sub(r'^[0-9] ', '', line_str)
+                deduped_list.add(line_str)
     return deduped_list
 
 def combine_wordlists(input_path: Path, output_path: Path) -> None:
